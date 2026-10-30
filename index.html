@@ -263,7 +263,7 @@ footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:v
     <div id="step-who" hidden>
       <button type="button" class="link back" data-act="to-when">&larr; Trocar horário</button>
       <h2 class="title">Seus dados</h2>
-      <p class="sub">Só precisamos do seu nome e de um contato.</p>
+      <p class="sub">Só precisamos do seu nome e do seu WhatsApp.</p>
       <div class="sumcard" id="sumcard"></div>
       <form id="form" novalidate>
         <div class="field">
@@ -272,11 +272,8 @@ footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:v
           <div class="err" id="err-name" role="alert"></div>
         </div>
         <div class="field">
-          <span class="lbl" id="ct-lbl">Como falamos com você?</span>
-          <div class="seg" role="radiogroup" aria-labelledby="ct-lbl">
-            <input type="radio" name="ctype" id="ct-wa" value="whatsapp" checked><label for="ct-wa">WhatsApp</label>
-            <input type="radio" name="ctype" id="ct-ig" value="instagram"><label for="ct-ig">Instagram</label>
-          </div>
+          <label class="lbl" for="contact">Seu WhatsApp</label>
+          <input type="radio" name="ctype" id="ct-wa" value="whatsapp" checked hidden>
           <input type="tel" id="contact" name="contact" inputmode="tel" autocomplete="tel-national" placeholder="(75) 99999-9999" maxlength="40" aria-label="Contato">
           <div class="err" id="err-contact" role="alert"></div>
         </div>

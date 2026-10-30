@@ -7,7 +7,7 @@ Mobile-first, nas cores preto, branco, azul claro e azul escuro.
 
 - Escolha do serviço: corte (R$ 20), luzes (R$ 60), corte + luzes (R$ 80), nevou (R$ 70) e corte + nevou (R$ 90)
 - Agenda dos próximos 30 dias com os horários livres
-- Formulário curto: nome e WhatsApp ou Instagram
+- Formulário curto: nome e WhatsApp
 - Confirmação com código, mensagem de lembrete para copiar e botão para enviar o pedido ao WhatsApp da barbearia
 - Painel do barbeiro: agendamentos do dia, concluir, cancelar, bloquear horários
 - Aba Clientes: ranking de quem mais agendou e relatório do mês
