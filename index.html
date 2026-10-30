@@ -1,0 +1,970 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Agende seu horário online na Barbearia Oliveira.">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Barbearia Oliveira</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: coluna única mobile-first (máx. 560px). Cabeçalho com barber pole, fluxo em 3 etapas
+   (serviço, horário, dados), confirmação em formato de ticket e painel do barbeiro em outra visão. */
+:root{
+  --ink:#06080B;
+  --navy:#0D2342;
+  --navy-hi:#153761;
+  --sky:#8CCDF5;
+  --paper:#FFFFFF;
+  --fg:#EAF1F8;
+  --mute:#9FB3C8;
+  --line:rgba(140,205,245,.22);
+  --ok:#62D8A4;
+  --bad:#FF8F85;
+  --f-display:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;
+  --f-body:'Instrument Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--ink);color:var(--fg);
+  font-family:var(--f-body);font-size:16px;line-height:1.45;
+  padding-block:0 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.wrap{max-width:560px;margin:0 auto}
+h1,h2,h3,p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+button:disabled{cursor:not-allowed}
+:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
+
+/* Cabeçalho */
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding-block:20px 14px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.pole{flex:none;width:14px;height:42px;border-radius:7px;border:1px solid var(--line);
+  background:repeating-linear-gradient(-40deg,var(--sky) 0 8px,var(--paper) 8px 16px,var(--navy-hi) 16px 24px)}
+.brand small{display:block;font:600 11px/1 var(--f-body);letter-spacing:.3em;text-transform:uppercase;color:var(--sky);margin-bottom:5px}
+.brand strong{display:block;font:900 32px/.9 var(--f-display);letter-spacing:.05em;text-transform:uppercase}
+.tabs{display:flex;gap:4px;padding:3px;border:1px solid var(--line);border-radius:8px;flex:none}
+.tabs button{border:0;background:transparent;padding:8px 12px;border-radius:6px;font-weight:600;font-size:14px;color:var(--mute)}
+.tabs button[aria-pressed="true"]{background:var(--paper);color:var(--ink)}
+.ribbon{height:8px;border-radius:2px;margin-bottom:22px;
+  background:repeating-linear-gradient(-45deg,var(--sky) 0 12px,var(--paper) 12px 24px,var(--navy-hi) 24px 36px)}
+
+/* Etapas */
+.steps{list-style:none;margin:0 0 22px;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.steps li{border-top:3px solid var(--navy-hi);padding-top:7px;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.steps li[data-on="true"]{border-top-color:var(--sky);color:var(--fg)}
+h2.title{font:800 34px/1 var(--f-display);text-transform:uppercase;letter-spacing:.03em;text-wrap:balance;margin-bottom:6px}
+.sub{color:var(--mute);margin-bottom:18px}
+h3.sec{font:800 22px/1 var(--f-display);text-transform:uppercase;letter-spacing:.06em;margin:28px 0 12px;color:var(--sky)}
+.hint{color:var(--mute);font-size:14px;margin-bottom:12px}
+
+/* Serviços */
+.list{display:flex;flex-direction:column;gap:10px}
+.svc{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;text-align:left;
+  background:var(--navy);border:1px solid var(--line);border-radius:6px;padding:16px 16px;min-height:76px}
+.svc:hover{border-color:var(--sky);background:var(--navy-hi)}
+.svc-main{display:flex;flex-direction:column;gap:3px;min-width:0}
+.svc-name{font:800 26px/1 var(--f-display);text-transform:uppercase;letter-spacing:.04em}
+.svc-desc{font-size:14px;color:var(--mute)}
+.svc-price{font:800 26px/1 var(--f-display);color:var(--sky);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+/* Barra de resumo e links */
+.chip{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line);border-radius:6px;padding:12px 14px;margin-bottom:20px;background:var(--navy)}
+.chip b{font:800 20px/1 var(--f-display);text-transform:uppercase;letter-spacing:.04em}
+.chip span{display:block;font-size:13px;color:var(--mute);margin-top:3px}
+.link{background:none;border:0;padding:6px 0;color:var(--sky);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.back{margin-bottom:10px;display:inline-block}
+
+/* Calendário */
+.cal-head,.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-head{margin-bottom:6px}
+.cal-head span{text-align:center;font-size:12px;font-weight:600;letter-spacing:.1em;color:var(--mute)}
+.day{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:56px;min-width:0;padding:4px 0;
+  border:1px solid var(--line);border-radius:6px;background:var(--navy);position:relative}
+.day.off{border:0;background:transparent}
+.day .m{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--sky);height:10px;line-height:10px}
+.day .n{font:800 22px/1 var(--f-display);font-variant-numeric:tabular-nums}
+.day .t{font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);height:10px;line-height:10px}
+.day.open .t::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--sky)}
+.day.open:hover{border-color:var(--sky)}
+.day.closed,.day.full{background:transparent;border-color:rgba(140,205,245,.1);color:#5D7189}
+.day.closed .n,.day.full .n{font-weight:700}
+.day.sel{background:var(--paper);color:var(--ink);border-color:var(--paper)}
+.day.sel .m{color:var(--navy)}
+.day.sel .t::before{background:var(--navy)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--mute);margin-top:10px}
+.legend i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--sky);margin-right:6px}
+
+/* Horários */
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
+.slot{min-height:50px;border:1px solid var(--line);border-radius:6px;background:var(--navy);font:800 22px/1 var(--f-display);letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.slot:hover{border-color:var(--sky);background:var(--navy-hi)}
+.empty{border:1px dashed var(--line);border-radius:6px;padding:18px;color:var(--mute);text-align:center}
+
+/* Formulário */
+.sumcard{border:1px solid var(--line);border-radius:6px;background:var(--navy);padding:14px 16px;margin-bottom:22px}
+.sumcard .row{display:flex;justify-content:space-between;gap:12px;padding:5px 0}
+.sumcard .row span:first-child{color:var(--mute)}
+.sumcard .row span:last-child{font-weight:600;text-align:right}
+.sumcard .total{border-top:1px dashed var(--line);margin-top:6px;padding-top:10px}
+.sumcard .total span:last-child{font:800 24px/1 var(--f-display);color:var(--sky)}
+.field{margin-bottom:18px}
+.field label.lbl,.field .lbl{display:block;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin-bottom:8px}
+input[type="text"],input[type="tel"]{width:100%;height:54px;padding:0 14px;background:var(--ink);color:var(--fg);border:1.5px solid var(--line);border-radius:6px;font:inherit;font-size:17px}
+input::placeholder{color:#5D7189}
+input[aria-invalid="true"]{border-color:var(--bad)}
+.err{color:var(--bad);font-size:14px;min-height:20px;margin-top:6px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{display:flex;align-items:center;justify-content:center;min-height:48px;border:1.5px solid var(--line);border-radius:6px;font-weight:600;cursor:pointer;background:var(--navy)}
+.seg input:checked+label{background:var(--paper);color:var(--ink);border-color:var(--paper)}
+.seg input:focus-visible+label{outline:2px solid var(--sky);outline-offset:2px}
+
+/* Botões */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:54px;padding:0 18px;border-radius:6px;border:0;
+  background:var(--paper);color:var(--ink);font:800 22px/1 var(--f-display);letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
+.btn:hover{background:var(--sky)}
+.btn:disabled{opacity:.5}
+.btn.ghost{background:transparent;color:var(--fg);border:1.5px solid var(--line)}
+.btn.ghost:hover{border-color:var(--sky);background:var(--navy)}
+.btn.sm{min-height:44px;font-size:17px;width:auto;flex:1 1 0}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+
+/* Confirmação */
+.status{border-radius:6px;padding:14px 16px;margin-bottom:18px;border:1px solid var(--line);background:var(--navy)}
+.status b{display:block;font:800 24px/1 var(--f-display);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.status.remote{border-color:var(--ok)}
+.status.remote b{color:var(--ok)}
+.status.local{border-color:var(--sky)}
+.ticket{background:var(--paper);color:var(--ink);border-radius:6px;overflow:hidden;margin-bottom:6px}
+.ticket::before{content:"";display:block;height:10px;background:repeating-linear-gradient(-45deg,var(--sky) 0 12px,var(--paper) 12px 24px,var(--navy) 24px 36px)}
+.ticket .in{padding:18px 18px 20px}
+.ticket .code{font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#4B6079}
+.ticket .when{font:900 44px/1 var(--f-display);text-transform:uppercase;letter-spacing:.02em;margin:6px 0 2px;color:var(--navy)}
+.ticket .what{font-weight:600}
+.ticket .rows{margin-top:14px;border-top:2px dashed #B9C8D8;padding-top:12px;display:grid;gap:6px}
+.ticket .rows div{display:flex;justify-content:space-between;gap:12px;font-size:15px}
+.ticket .rows span:first-child{color:#4B6079}
+.ticket .rows span:last-child{font-weight:700;text-align:right}
+.msg{border:1px solid var(--line);border-radius:6px;background:var(--navy);padding:14px;font-size:15px;white-space:pre-wrap;user-select:text}
+
+/* Painel */
+.pnav{display:grid;grid-template-columns:52px 1fr 52px;gap:8px;align-items:center;margin-bottom:6px}
+.pnav .ib{height:52px;border:1px solid var(--line);border-radius:6px;background:var(--navy);font-size:26px;line-height:1}
+.pnav .ib:hover{border-color:var(--sky)}
+.pnav .mid{text-align:center}
+.kicker{font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--sky)}
+.pnav h2{font:800 30px/1.05 var(--f-display);text-transform:uppercase;letter-spacing:.03em}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 4px}
+.stat{border:1px solid var(--line);border-radius:6px;background:var(--navy);padding:10px 12px;min-width:0}
+.stat span{display:block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.stat b{display:block;font:800 26px/1.1 var(--f-display);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.bk{border:1px solid var(--line);border-radius:6px;background:var(--navy);padding:14px;margin-bottom:10px}
+.bk.done{background:transparent;opacity:.85}
+.bk-top{display:flex;gap:14px;align-items:flex-start}
+.bk-time{flex:none;font:900 32px/1 var(--f-display);font-variant-numeric:tabular-nums;color:var(--sky)}
+.bk-time small{display:block;font:600 12px/1.3 var(--f-body);letter-spacing:.04em;color:var(--mute)}
+.bk-info{min-width:0;flex:1}
+.bk-name{font-weight:700;font-size:18px;overflow-wrap:anywhere}
+.bk-meta{color:var(--mute);font-size:14px;overflow-wrap:anywhere}
+.pill{flex:none;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--line);border-radius:99px;padding:4px 9px}
+.pill.ok{border-color:var(--ok);color:var(--ok)}
+.bk .btns{margin-top:12px}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+.btn.danger.arm{background:var(--bad);color:var(--ink)}
+.blk{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
+.cell{min-height:56px;border:1px solid var(--line);border-radius:6px;background:var(--navy);font:800 20px/1 var(--f-display);letter-spacing:.04em;font-variant-numeric:tabular-nums;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.cell small{font:600 10px/1 var(--f-body);letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.cell.blocked{background:repeating-linear-gradient(-45deg,var(--ink) 0 6px,var(--navy-hi) 6px 12px);border-color:var(--sky)}
+.cell.busy{background:var(--paper);color:var(--ink);border-color:var(--paper)}
+.cell.busy small{color:#4B6079}
+.cell.past{opacity:.35}
+.cell:not(:disabled):hover{border-color:var(--sky)}
+
+/* Clientes: ranking e relatório */
+.stats.two{grid-template-columns:repeat(2,1fr)}
+.rk{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-radius:6px;background:var(--navy);padding:14px;margin-bottom:10px}
+.rk.top{border-color:var(--paper)}
+.rk-pos{flex:none;width:34px;font:900 34px/1 var(--f-display);color:var(--sky);font-variant-numeric:tabular-nums}
+.rk.top .rk-pos{color:var(--paper)}
+.rk-body{min-width:0;flex:1}
+.rk-name{font-weight:700;font-size:18px;overflow-wrap:anywhere}
+.rk-svcs{color:var(--mute);font-size:14px;overflow-wrap:anywhere}
+.rk-money{flex:none;text-align:right}
+.rk-money b{display:block;font:800 22px/1 var(--f-display);color:var(--sky);font-variant-numeric:tabular-nums}
+.rk-money span{display:block;font-size:12px;color:var(--mute);margin-top:3px}
+.scope{display:flex;gap:4px;padding:3px;border:1px solid var(--line);border-radius:8px;width:fit-content;margin-bottom:14px}
+.scope button{border:0;background:transparent;padding:8px 14px;border-radius:6px;font-weight:600;font-size:14px;color:var(--mute)}
+.scope button[aria-pressed="true"]{background:var(--paper);color:var(--ink)}
+@media (max-width:480px){
+  #tabs{width:100%}
+  #tabs button{flex:1}
+}
+
+footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:var(--mute);font-size:14px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 16px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));max-width:calc(100% - 32px);
+  background:var(--paper);color:var(--ink);font-weight:600;padding:12px 16px;border-radius:6px;z-index:20;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+@media (min-width:520px){
+  .stat b{font-size:30px}
+  .day{min-height:62px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .svc,.day,.slot,.btn,.cell{transition:background-color .15s,border-color .15s}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="pole" aria-hidden="true"></span>
+      <div><small>Barbearia</small><strong>Oliveira</strong></div>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="Visões" hidden>
+      <button type="button" data-act="tab" data-v="book" aria-pressed="true">Agendar</button>
+      <button type="button" data-act="tab" data-v="panel" aria-pressed="false">Painel</button>
+      <button type="button" data-act="tab" data-v="rank" aria-pressed="false">Clientes</button>
+    </nav>
+  </header>
+  <div class="ribbon" aria-hidden="true"></div>
+
+  <!-- AGENDAMENTO -->
+  <section id="v-book" aria-label="Agendamento online">
+    <ol class="steps" id="steps" aria-label="Etapas do agendamento">
+      <li data-on="true">Serviço</li>
+      <li data-on="false">Horário</li>
+      <li data-on="false">Seus dados</li>
+    </ol>
+
+    <div id="step-service">
+      <h2 class="title">Escolha o serviço</h2>
+      <p class="sub">Toque no serviço para ver os horários livres.</p>
+      <div class="list" id="svc-list"></div>
+    </div>
+
+    <div id="step-when" hidden>
+      <button type="button" class="link back" data-act="to-service">&larr; Trocar serviço</button>
+      <div class="chip"><div><b id="chip-name"></b><span id="chip-sub"></span></div><b id="chip-price"></b></div>
+      <h2 class="title">Escolha o dia</h2>
+      <p class="sub" id="cal-sub"></p>
+      <div class="cal-head" aria-hidden="true"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>
+      <div class="cal" id="cal" role="group" aria-label="Próximos 30 dias"></div>
+      <div class="legend"><span><i></i>Tem horário livre</span><span>Cinza: sem horários livres</span></div>
+      <div id="slots-wrap" hidden>
+        <h3 class="sec" id="slots-title">Horários livres</h3>
+        <div class="slots" id="slots"></div>
+      </div>
+    </div>
+
+    <div id="step-who" hidden>
+      <button type="button" class="link back" data-act="to-when">&larr; Trocar horário</button>
+      <h2 class="title">Seus dados</h2>
+      <p class="sub">Só precisamos do seu nome e de um contato.</p>
+      <div class="sumcard" id="sumcard"></div>
+      <form id="form" novalidate>
+        <div class="field">
+          <label class="lbl" for="name">Nome</label>
+          <input type="text" id="name" name="name" autocomplete="name" maxlength="60" placeholder="Como podemos te chamar?">
+          <div class="err" id="err-name" role="alert"></div>
+        </div>
+        <div class="field">
+          <span class="lbl" id="ct-lbl">Como falamos com você?</span>
+          <div class="seg" role="radiogroup" aria-labelledby="ct-lbl">
+            <input type="radio" name="ctype" id="ct-wa" value="whatsapp" checked><label for="ct-wa">WhatsApp</label>
+            <input type="radio" name="ctype" id="ct-ig" value="instagram"><label for="ct-ig">Instagram</label>
+          </div>
+          <input type="tel" id="contact" name="contact" inputmode="tel" autocomplete="tel-national" placeholder="(75) 99999-9999" maxlength="40" aria-label="Contato">
+          <div class="err" id="err-contact" role="alert"></div>
+        </div>
+        <button type="submit" class="btn" id="submit">Confirmar agendamento</button>
+      </form>
+    </div>
+
+    <div id="step-done" hidden></div>
+  </section>
+
+  <!-- PAINEL DO BARBEIRO -->
+  <section id="v-panel" hidden aria-label="Painel do barbeiro">
+    <div class="pnav">
+      <button type="button" class="ib" data-act="day-prev" aria-label="Dia anterior">&lsaquo;</button>
+      <div class="mid"><p class="kicker" id="p-kicker"></p><h2 id="p-title"></h2></div>
+      <button type="button" class="ib" data-act="day-next" aria-label="Próximo dia">&rsaquo;</button>
+    </div>
+    <div style="text-align:center"><button type="button" class="link" data-act="day-today">Ir para hoje</button></div>
+    <div class="stats" id="p-stats"></div>
+    <h3 class="sec">Agendamentos do dia</h3>
+    <div id="p-list"></div>
+    <h3 class="sec">Bloquear horários</h3>
+    <p class="hint">Toque em um horário livre para bloquear. Toque de novo para liberar. Horários com cliente não podem ser bloqueados.</p>
+    <div class="btns" style="margin:0 0 12px">
+      <button type="button" class="btn sm ghost" data-act="block-day">Bloquear o dia todo</button>
+      <button type="button" class="btn sm ghost" data-act="unblock-day">Liberar o dia todo</button>
+    </div>
+    <div class="blk" id="p-blocks"></div>
+  </section>
+
+  <!-- CLIENTES: RANKING E RELATÓRIO DO MÊS -->
+  <section id="v-rank" hidden aria-label="Clientes e relatório do mês">
+    <div class="pnav">
+      <button type="button" class="ib" data-act="rank-prev" aria-label="Mês anterior">&lsaquo;</button>
+      <div class="mid"><p class="kicker" id="r-kicker"></p><h2 id="r-title"></h2></div>
+      <button type="button" class="ib" data-act="rank-next" aria-label="Próximo mês">&rsaquo;</button>
+    </div>
+    <div class="stats two" id="r-stats"></div>
+    <h3 class="sec">Como foi o mês</h3>
+    <div class="msg" id="r-text"></div>
+    <div class="btns"><button type="button" class="btn sm ghost" data-act="copy-report">Copiar relatório</button></div>
+    <h3 class="sec" id="r-rank-title">Ranking de clientes</h3>
+    <div class="scope" role="group" aria-label="Período do ranking">
+      <button type="button" data-act="rank-scope" data-s="month" aria-pressed="true">No mês</button>
+      <button type="button" data-act="rank-scope" data-s="all" aria-pressed="false">Geral</button>
+    </div>
+    <div id="r-list"></div>
+  </section>
+
+  <footer>
+    <span>Aberto todos os dias</span>
+    <span><a class="link" href="https://wa.me/557799946068" target="_blank" rel="noopener">WhatsApp (77) 9994-6068</a> &middot; <a class="link" href="https://instagram.com/barbearia_oliveiraz" target="_blank" rel="noopener">@barbearia_oliveiraz</a></span>
+  </footer>
+</div>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- Configuração ---------- */
+  var NOME = 'Barbearia Oliveira';
+  // Número da barbearia com DDI e DDD, só dígitos (ex.: '5575999999999').
+  // Quando preenchido, a confirmação oferece enviar o pedido ao barbeiro pelo WhatsApp.
+  var WHATSAPP_BARBEARIA = '557799946068';
+  var PASSO = 30;                     // minutos por célula da agenda
+  var DIAS = 30;                      // janela de agendamento
+  // Faixas de atendimento por dia da semana (0 = domingo), em minutos desde 00:00
+  var SEG_QUA_SEX = [[780, 1080]];                 // 13:00 às 18:00
+  var TER_QUI = [[870, 1080]];                     // 14:30 às 18:00
+  var FIM_DE_SEMANA = [[420, 720], [780, 1080]];   // 07:00 às 12:00 e 13:00 às 18:00
+  var HORARIO = { 0: FIM_DE_SEMANA, 1: SEG_QUA_SEX, 2: TER_QUI, 3: SEG_QUA_SEX, 4: TER_QUI, 5: SEG_QUA_SEX, 6: FIM_DE_SEMANA };
+  var SERVICOS = [
+    { id: 'corte', nome: 'Corte', desc: 'Corte masculino', min: PASSO, preco: 20 },
+    { id: 'luzes', nome: 'Luzes', desc: 'Mechas clareadas', min: PASSO, preco: 60 },
+    { id: 'corte-luzes', nome: 'Corte + luzes', desc: 'Os dois no mesmo horário', min: PASSO, preco: 80 },
+    { id: 'nevou', nome: 'Nevou', desc: 'Descoloração e platinado', min: PASSO, preco: 70 },
+    { id: 'corte-nevou', nome: 'Corte + nevou', desc: 'Os dois no mesmo horário', min: PASSO, preco: 90 }
+  ];
+
+  /* ---------- Utilidades de data (sempre no horário de Brasília) ---------- */
+  var WD = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+  var WD3 = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  var MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  var MES3 = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function nowSP() { return new Date(Date.now() - 3 * 3600 * 1000); }
+  function ymd(d) { return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()); }
+  function parseYmd(s) { var p = s.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2])); }
+  function addDays(s, n) { var d = parseYmd(s); d.setUTCDate(d.getUTCDate() + n); return ymd(d); }
+  function dow(s) { return parseYmd(s).getUTCDay(); }
+  function hm(min) { return pad(Math.floor(min / 60)) + ':' + pad(min % 60); }
+  function key(date, min) { return date + '_' + pad(Math.floor(min / 60)) + pad(min % 60); }
+  function todayStr() { return ymd(nowSP()); }
+  function longDate(s) { var d = parseYmd(s); return WD[d.getUTCDay()] + ', ' + d.getUTCDate() + ' de ' + MES[d.getUTCMonth()]; }
+  function shortDate(s) { var d = parseYmd(s); return WD3[d.getUTCDay()] + ', ' + d.getUTCDate() + ' ' + MES3[d.getUTCMonth()]; }
+  function brl(n) { return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+  function durLabel(m) { return m < 60 ? m + ' min' : Math.floor(m / 60) + 'h' + (m % 60 ? pad(m % 60) : ''); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function $(sel) { return document.querySelector(sel); }
+  function firstName(n) { return String(n).split(' ')[0]; }
+
+  /* ---------- Estado ---------- */
+  var LKEY = 'oliveira-local-v1';
+  function loadLocal() {
+    try { var r = JSON.parse(localStorage.getItem(LKEY) || 'null'); if (r && r.slots && r.bookings) return r; } catch (e) {}
+    return { bookings: {}, slots: {} };
+  }
+  function saveLocal() { try { localStorage.setItem(LKEY, JSON.stringify(S.local)); } catch (e) {} }
+
+  var S = {
+    view: 'book', step: 'service', svc: null, date: null, start: null,
+    remote: { slots: {}, blocks: {}, bookings: {} },
+    local: loadLocal(),
+    db: null, admin: false, canWrite: null,
+    panelDate: todayStr(), armed: null, busy: false
+  };
+
+  function isTaken(k) { return !!(S.remote.slots[k] || S.local.slots[k] || S.remote.blocks[k]); }
+  function cellKeys(date, start, dur) {
+    var out = [], n = Math.ceil(dur / PASSO);
+    for (var i = 0; i < n; i++) out.push(key(date, start + i * PASSO));
+    return out;
+  }
+  function freeStarts(date, svc) {
+    var h = HORARIO[dow(date)];
+    var today = todayStr();
+    if (!h || date < today || date > addDays(today, DIAS - 1)) return [];
+    var now = nowSP(), nowMin = now.getUTCHours() * 60 + now.getUTCMinutes();
+    var out = [];
+    h.forEach(function (r) {
+      for (var m = r[0]; m + svc.min <= r[1]; m += PASSO) {
+        if (date === today && m <= nowMin) continue;
+        var ok = true;
+        for (var i = 0; i < Math.ceil(svc.min / PASSO); i++) { if (isTaken(key(date, m + i * PASSO))) { ok = false; break; } }
+        if (ok) out.push(m);
+      }
+    });
+    return out;
+  }
+
+  /* ---------- Toast ---------- */
+  var toastTimer;
+  function toast(msg) {
+    var t = $('#toast'); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, 2800);
+  }
+  function copyText(text, node) {
+    function fallback() {
+      try {
+        var r = document.createRange(); r.selectNodeContents(node);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      } catch (e) {}
+      toast('Selecionamos o texto. Copie manualmente.');
+    }
+    try {
+      navigator.clipboard.writeText(text).then(function () { toast('Mensagem copiada'); }, fallback);
+    } catch (e) { fallback(); }
+  }
+
+  /* ---------- Mensagens ---------- */
+  function whenWord(date) {
+    var t = todayStr();
+    if (date === t) return 'hoje';
+    if (date === addDays(t, 1)) return 'amanhã';
+    return longDate(date);
+  }
+  function msgLembrete(b) {
+    return 'Olá, ' + firstName(b.name) + '! Lembrete do seu horário na ' + NOME + ': ' + b.svcName + ', ' + whenWord(b.date) + ' às ' + hm(b.start) +
+      '. Valor: ' + brl(b.price) + '. Se não puder comparecer, avise com antecedência. Até lá!';
+  }
+  function msgParaBarbeiro(b) {
+    return 'Olá, ' + NOME + '! Quero confirmar meu agendamento: ' + b.svcName + ', ' + longDate(b.date) + ' às ' + hm(b.start) +
+      '. Nome: ' + b.name + '. ' + (b.ctype === 'whatsapp' ? 'WhatsApp: ' + fmtPhone(b.contact) : 'Instagram: @' + b.contact) + '. Código OL-' + b.id + '.';
+  }
+  function fmtPhone(d) {
+    if (d.length === 11) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7);
+    if (d.length === 10) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6);
+    return d;
+  }
+  function contactLabel(b) { return b.ctype === 'whatsapp' ? fmtPhone(b.contact) : '@' + b.contact; }
+
+  /* ---------- Navegação ---------- */
+  function setView(v, fromHash) {
+    if ((v === 'panel' || v === 'rank') && !S.admin) v = 'book';
+    S.view = v;
+    $('#v-book').hidden = v !== 'book';
+    $('#v-panel').hidden = v !== 'panel';
+    $('#v-rank').hidden = v !== 'rank';
+    var btns = document.querySelectorAll('#tabs button');
+    for (var i = 0; i < btns.length; i++) btns[i].setAttribute('aria-pressed', String(btns[i].getAttribute('data-v') === v));
+    if (!fromHash) { try { history.replaceState(null, '', v === 'panel' ? '#painel' : (v === 'rank' ? '#clientes' : '#agendar')); } catch (e) {} }
+    if (v === 'panel') renderPanel();
+    if (v === 'rank') renderRank();
+  }
+  var STEPS = ['service', 'when', 'who', 'done'];
+  function go(step) {
+    S.step = step;
+    for (var i = 0; i < STEPS.length; i++) $('#step-' + STEPS[i]).hidden = STEPS[i] !== step;
+    var lis = document.querySelectorAll('#steps li'), idx = Math.min(STEPS.indexOf(step), 2);
+    for (var j = 0; j < lis.length; j++) lis[j].setAttribute('data-on', String(j <= idx));
+    $('#steps').hidden = step === 'done';
+    if (step === 'when') { renderChip(); renderCalendar(); renderSlots(); }
+    if (step === 'who') renderSummary();
+    window.scrollTo(0, 0);
+  }
+
+  /* ---------- Etapa 1: serviços ---------- */
+  function renderServices() {
+    $('#svc-list').innerHTML = SERVICOS.map(function (s) {
+      return '<button type="button" class="svc" data-act="pick-svc" data-id="' + s.id + '">' +
+        '<span class="svc-main"><span class="svc-name">' + esc(s.nome) + '</span><span class="svc-desc">' + esc(s.desc) + '</span></span>' +
+        '<span class="svc-price">' + brl(s.preco) + '</span></button>';
+    }).join('');
+  }
+
+  /* ---------- Etapa 2: calendário e horários ---------- */
+  function renderChip() {
+    var s = S.svc;
+    $('#chip-name').textContent = s.nome;
+    $('#chip-sub').textContent = s.desc;
+    $('#chip-price').textContent = brl(s.preco);
+    var t = todayStr(), l = addDays(t, DIAS - 1);
+    $('#cal-sub').textContent = 'De ' + shortDate(t) + ' a ' + shortDate(l) + '.';
+  }
+  function renderCalendar() {
+    if (!S.svc) return;
+    var today = todayStr(), last = addDays(today, DIAS - 1);
+    var start = addDays(today, -dow(today)), end = addDays(last, 6 - dow(last));
+    var html = '', first = true;
+    for (var d = start; d <= end; d = addDays(d, 1)) {
+      if (d < today || d > last) { html += '<span class="day off" aria-hidden="true"></span>'; continue; }
+      var dt = parseYmd(d), num = dt.getUTCDate();
+      var free = freeStarts(d, S.svc).length;
+      var closed = !HORARIO[dow(d)];
+      var state = closed ? 'closed' : (free ? 'open' : 'full');
+      var sel = d === S.date;
+      var month = (first || num === 1) ? MES3[dt.getUTCMonth()] : '';
+      first = false;
+      var label = longDate(d) + ', ' + (state === 'open' ? free + (free === 1 ? ' horário livre' : ' horários livres') : (closed ? 'fechado' : 'sem horários livres'));
+      html += '<button type="button" class="day ' + state + (sel ? ' sel' : '') + '" data-act="pick-day" data-date="' + d + '"' +
+        (state === 'open' ? '' : ' disabled') + ' aria-pressed="' + sel + '" aria-label="' + esc(label) + '">' +
+        '<span class="m">' + month + '</span><span class="n">' + num + '</span><span class="t"></span></button>';
+    }
+    $('#cal').innerHTML = html;
+  }
+  function renderSlots() {
+    var wrap = $('#slots-wrap');
+    if (!S.date || !S.svc) { wrap.hidden = true; return; }
+    var starts = freeStarts(S.date, S.svc);
+    wrap.hidden = false;
+    $('#slots-title').textContent = 'Livres em ' + shortDate(S.date);
+    $('#slots').innerHTML = starts.length ? starts.map(function (m) {
+      return '<button type="button" class="slot" data-act="pick-slot" data-start="' + m + '" aria-label="' + hm(m) + '">' + hm(m) + '</button>';
+    }).join('') : '<div class="empty" style="grid-column:1/-1">Esse dia ficou sem horários livres. Escolha outro dia.</div>';
+  }
+
+  /* ---------- Etapa 3: dados ---------- */
+  function renderSummary() {
+    var s = S.svc;
+    $('#sumcard').innerHTML =
+      '<div class="row"><span>Serviço</span><span>' + esc(s.nome) + '</span></div>' +
+      '<div class="row"><span>Dia</span><span>' + esc(longDate(S.date)) + '</span></div>' +
+      '<div class="row"><span>Horário</span><span>' + hm(S.start) + '</span></div>' +
+      '<div class="row total"><span>Valor</span><span>' + brl(s.preco) + '</span></div>';
+  }
+  function setErr(id, msg) {
+    $('#err-' + id).textContent = msg;
+    var inp = $('#' + id); if (inp) inp.setAttribute('aria-invalid', msg ? 'true' : 'false');
+  }
+  function ctype() { return document.querySelector('input[name="ctype"]:checked').value; }
+  function applyCtype() {
+    var c = $('#contact'), wa = ctype() === 'whatsapp';
+    c.value = ''; setErr('contact', '');
+    c.placeholder = wa ? '(75) 99999-9999' : '@seuusuario';
+    c.setAttribute('inputmode', wa ? 'tel' : 'text');
+    c.setAttribute('autocomplete', wa ? 'tel-national' : 'off');
+    c.setAttribute('aria-label', wa ? 'Número de WhatsApp com DDD' : 'Usuário do Instagram');
+    c.type = wa ? 'tel' : 'text';
+    c.setAttribute('autocapitalize', wa ? 'off' : 'none');
+  }
+  function maskPhone() {
+    var c = $('#contact'); if (ctype() !== 'whatsapp') return;
+    var d = c.value.replace(/\D/g, '').slice(0, 11), out = '';
+    if (d.length > 0) out = '(' + d.slice(0, 2);
+    if (d.length >= 3) out += ') ' + d.slice(2, d.length > 10 ? 7 : 6);
+    if (d.length > (d.length > 10 ? 7 : 6)) out += '-' + d.slice(d.length > 10 ? 7 : 6);
+    c.value = out;
+  }
+  function newId() {
+    var A = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', out = '', r = new Uint8Array(6);
+    try { crypto.getRandomValues(r); } catch (e) { for (var i = 0; i < 6; i++) r[i] = Math.floor(Math.random() * 256); }
+    for (var j = 0; j < 6; j++) out += A[r[j] % A.length];
+    return out;
+  }
+
+  async function createBooking(b) {
+    var cells = cellKeys(b.date, b.start, b.dur);
+    if (cells.some(isTaken)) throw 'taken';
+    if (S.db && S.canWrite !== false) {
+      try {
+        for (var i = 0; i < cells.length; i++) {
+          var snap = await S.db.doc('slots/' + cells[i]).get();
+          if (snap.exists) throw { taken: true };
+        }
+        var written = [];
+        try {
+          for (var j = 0; j < cells.length; j++) {
+            await S.db.doc('slots/' + cells[j]).set({ date: b.date, bookingId: b.id });
+            written.push(cells[j]);
+          }
+          await S.db.doc('bookings/' + b.id).set(b);
+        } catch (e) {
+          for (var k = 0; k < written.length; k++) { try { await S.db.doc('slots/' + written[k]).delete(); } catch (_) {} }
+          throw e;
+        }
+        return 'remote';
+      } catch (e) {
+        if (e && e.taken) throw 'taken';
+        /* sem permissão de escrita no banco: cai para o modo local */
+      }
+    }
+    S.local.bookings[b.id] = b;
+    cells.forEach(function (k) { S.local.slots[k] = { bookingId: b.id }; });
+    saveLocal();
+    return 'local';
+  }
+
+  async function onSubmit(e) {
+    e.preventDefault();
+    if (S.busy) return;
+    var name = $('#name').value.trim().replace(/\s+/g, ' ');
+    var type = ctype(), raw = $('#contact').value.trim(), contact = '', ok = true;
+    setErr('name', ''); setErr('contact', '');
+    if (name.length < 2) { setErr('name', 'Informe seu nome.'); ok = false; }
+    if (type === 'whatsapp') {
+      var d = raw.replace(/\D/g, '');
+      if (d.length > 11 && d.indexOf('55') === 0) d = d.slice(2);
+      if (d.length < 10 || d.length > 11) { setErr('contact', 'Digite o WhatsApp com DDD, por exemplo (75) 99999-9999.'); ok = false; }
+      contact = d;
+    } else {
+      var h = raw.replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/^@/, '').replace(/[\/?].*$/, '');
+      if (!/^[A-Za-z0-9._]{1,30}$/.test(h)) { setErr('contact', 'Digite só o usuário do Instagram, por exemplo @barbeariaoliveira.'); ok = false; }
+      contact = h;
+    }
+    if (!ok) { var bad = document.querySelector('[aria-invalid="true"]'); if (bad) bad.focus(); return; }
+
+    var b = {
+      id: newId(), date: S.date, start: S.start, dur: S.svc.min, svc: S.svc.id, svcName: S.svc.nome, price: S.svc.preco,
+      name: name, ctype: type, contact: contact, status: 'agendado', created: Date.now()
+    };
+    S.busy = true; var btn = $('#submit'); btn.disabled = true; btn.textContent = 'Confirmando...';
+    try {
+      var mode = await createBooking(b);
+      renderDone(b, mode);
+      go('done');
+      $('#form').reset(); applyCtype();
+    } catch (err) {
+      if (err === 'taken') {
+        toast('Esse horário acabou de ser ocupado. Escolha outro.');
+        S.start = null; go('when');
+      } else {
+        toast('Não foi possível confirmar agora. Tente de novo.');
+      }
+    }
+    S.busy = false; btn.disabled = false; btn.textContent = 'Confirmar agendamento';
+  }
+
+  /* ---------- Confirmação ---------- */
+  function renderDone(b, mode) {
+    var msg = msgLembrete(b);
+    var status;
+    if (mode === 'remote') {
+      status = '<div class="status remote"><b>Agendamento confirmado</b><p>Seu horário está reservado na ' + esc(NOME) + '.</p></div>';
+    } else if (WHATSAPP_BARBEARIA) {
+      status = '<div class="status local"><b>Falta um passo</b><p>Envie o pedido pelo WhatsApp para a barbearia confirmar seu horário.</p></div>';
+    } else {
+      status = '<div class="status local"><b>Salvo neste aparelho</b><p>O barbeiro ainda não recebeu este pedido. Guarde o código abaixo.</p></div>';
+    }
+    var wa = WHATSAPP_BARBEARIA && mode === 'local'
+      ? '<a class="btn" style="margin-top:12px" href="https://wa.me/' + WHATSAPP_BARBEARIA + '?text=' + encodeURIComponent(msgParaBarbeiro(b)) + '" target="_blank" rel="noopener">Enviar pelo WhatsApp</a>' : '';
+    $('#step-done').innerHTML = status +
+      '<div class="ticket"><div class="in">' +
+      '<div class="code">Código OL-' + esc(b.id) + '</div>' +
+      '<div class="when">' + esc(shortDate(b.date)) + ' &middot; ' + hm(b.start) + '</div>' +
+      '<div class="what">' + esc(b.svcName) + '</div>' +
+      '<div class="rows"><div><span>Nome</span><span>' + esc(b.name) + '</span></div>' +
+      '<div><span>' + (b.ctype === 'whatsapp' ? 'WhatsApp' : 'Instagram') + '</span><span>' + esc(contactLabel(b)) + '</span></div>' +
+      '<div><span>Valor</span><span>' + brl(b.price) + '</span></div></div>' +
+      '</div></div>' + wa +
+      '<h3 class="sec">Mensagem de lembrete</h3>' +
+      '<p class="hint">Guarde esta mensagem. Ela é o lembrete do seu horário.</p>' +
+      '<div class="msg" id="msg-text">' + esc(msg) + '</div>' +
+      '<div class="btns"><button type="button" class="btn sm ghost" data-act="copy-msg">Copiar mensagem</button>' +
+      '<button type="button" class="btn sm" data-act="restart">Novo agendamento</button></div>';
+    S.lastMsg = msg;
+  }
+
+  /* ---------- Painel do barbeiro ---------- */
+  function dayBookings(d) {
+    return Object.keys(S.remote.bookings).map(function (k) { return S.remote.bookings[k]; })
+      .filter(function (b) { return b.date === d && b.status !== 'cancelado'; })
+      .sort(function (a, b) { return a.start - b.start; });
+  }
+  function renderPanel() {
+    if (S.view !== 'panel' || !S.admin) return;
+    var d = S.panelDate, today = todayStr();
+    $('#p-kicker').textContent = d === today ? 'Hoje' : (d === addDays(today, 1) ? 'Amanhã' : (d === addDays(today, -1) ? 'Ontem' : WD[dow(d)]));
+    $('#p-title').textContent = parseYmd(d).getUTCDate() + ' de ' + MES[parseYmd(d).getUTCMonth()];
+    var list = dayBookings(d);
+    var done = list.filter(function (b) { return b.status === 'concluido'; });
+    var open = list.filter(function (b) { return b.status !== 'concluido'; });
+    var sum = function (a) { return a.reduce(function (t, b) { return t + b.price; }, 0); };
+    $('#p-stats').innerHTML =
+      '<div class="stat"><span>Agendados</span><b>' + list.length + '</b></div>' +
+      '<div class="stat"><span>Concluídos</span><b>' + done.length + '</b></div>' +
+      '<div class="stat"><span>Recebido</span><b>' + brl(sum(done)) + '</b></div>';
+    $('#p-list').innerHTML = list.length ? list.map(bookingCard).join('') :
+      '<div class="empty">Nenhum cliente agendado para este dia.</div>';
+    renderBlocks();
+  }
+  function bookingCard(b) {
+    var isDone = b.status === 'concluido';
+    var rem = msgLembrete(b);
+    var remBtn = b.ctype === 'whatsapp'
+      ? '<a class="btn sm ghost" href="https://wa.me/55' + b.contact + '?text=' + encodeURIComponent(rem) + '" target="_blank" rel="noopener">Lembrete</a>'
+      : '<button type="button" class="btn sm ghost" data-act="copy-rem" data-id="' + b.id + '">Copiar lembrete</button>' +
+        '<a class="btn sm ghost" href="https://instagram.com/' + b.contact + '" target="_blank" rel="noopener">Abrir Instagram</a>';
+    var actions = isDone
+      ? '<button type="button" class="btn sm ghost" data-act="undo" data-id="' + b.id + '">Desfazer</button>'
+      : '<button type="button" class="btn sm" data-act="complete" data-id="' + b.id + '">Concluir</button>' + remBtn +
+        '<button type="button" class="btn sm ghost danger' + (S.armed === b.id ? ' arm' : '') + '" data-act="cancel" data-id="' + b.id + '">' +
+        (S.armed === b.id ? 'Confirmar cancelamento' : 'Cancelar') + '</button>';
+    return '<div class="bk' + (isDone ? ' done' : '') + '"><div class="bk-top">' +
+      '<div class="bk-time">' + hm(b.start) + '</div>' +
+      '<div class="bk-info"><div class="bk-name">' + esc(b.name) + '</div>' +
+      '<div class="bk-meta">' + esc(b.svcName) + ' &middot; ' + brl(b.price) + '</div>' +
+      '<div class="bk-meta">' + (b.ctype === 'whatsapp' ? 'WhatsApp ' : 'Instagram ') + esc(contactLabel(b)) + '</div></div>' +
+      (isDone ? '<span class="pill ok">Concluído</span>' : '') + '</div>' +
+      '<div class="btns">' + actions + '</div></div>';
+  }
+  function dayCells(d) {
+    var h = HORARIO[dow(d)]; if (!h) return [];
+    var now = nowSP(), today = ymd(now), nowMin = now.getUTCHours() * 60 + now.getUTCMinutes();
+    var out = [];
+    h.forEach(function (r) {
+      for (var m = r[0]; m < r[1]; m += PASSO) {
+        var k = key(d, m);
+        out.push({ k: k, m: m, busy: !!S.remote.slots[k], blocked: !!S.remote.blocks[k], past: d < today || (d === today && m <= nowMin) });
+      }
+    });
+    return out;
+  }
+  function renderBlocks() {
+    var d = S.panelDate, cells = dayCells(d);
+    $('#p-blocks').innerHTML = cells.length ? cells.map(function (c) {
+      var cls = 'cell' + (c.busy ? ' busy' : (c.blocked ? ' blocked' : '')) + (c.past && !c.busy ? ' past' : '');
+      var sub = c.busy ? 'cliente' : (c.blocked ? 'bloqueado' : (c.past ? 'passou' : 'livre'));
+      return '<button type="button" class="' + cls + '" data-act="toggle-block" data-key="' + c.k + '" data-start="' + c.m + '"' +
+        ((c.busy || c.past) ? ' disabled' : '') + ' aria-pressed="' + c.blocked + '">' + hm(c.m) + '<small>' + sub + '</small></button>';
+    }).join('') : '<div class="empty" style="grid-column:1/-1">Sem expediente neste dia.</div>';
+  }
+
+  async function run(fn) {
+    if (S.busy) return; S.busy = true;
+    try { await fn(); } catch (e) { toast('Não foi possível salvar. Tente de novo.'); }
+    S.busy = false; renderPanel();
+  }
+  function bookingById(id) { return S.remote.bookings[id]; }
+
+  /* ---------- Cliques ---------- */
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-act]'); if (!el) return;
+    var act = el.getAttribute('data-act');
+    if (act === 'pick-svc') {
+      S.svc = SERVICOS.filter(function (s) { return s.id === el.getAttribute('data-id'); })[0];
+      S.date = null; S.start = null; go('when');
+    } else if (act === 'to-service') { go('service'); }
+    else if (act === 'to-when') { go('when'); }
+    else if (act === 'pick-day') {
+      S.date = el.getAttribute('data-date'); renderCalendar(); renderSlots();
+      var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      $('#slots-wrap').scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+    } else if (act === 'pick-slot') {
+      S.start = Number(el.getAttribute('data-start')); go('who');
+    } else if (act === 'copy-msg') { copyText(S.lastMsg, $('#msg-text')); }
+    else if (act === 'restart') { S.svc = null; S.date = null; S.start = null; go('service'); }
+    else if (act === 'tab') { setView(el.getAttribute('data-v')); }
+    else if (act === 'rank-prev') { S.rankMonth = addMonths(S.rankMonth, -1); renderRank(); }
+    else if (act === 'rank-next') { S.rankMonth = addMonths(S.rankMonth, 1); renderRank(); }
+    else if (act === 'rank-scope') { S.rankScope = el.getAttribute('data-s'); renderRank(); }
+    else if (act === 'copy-report') { copyText(S.reportText, $('#r-text')); }
+    else if (act === 'day-prev') { S.panelDate = addDays(S.panelDate, -1); S.armed = null; renderPanel(); }
+    else if (act === 'day-next') { S.panelDate = addDays(S.panelDate, 1); S.armed = null; renderPanel(); }
+    else if (act === 'day-today') { S.panelDate = todayStr(); S.armed = null; renderPanel(); }
+    else if (act === 'complete') { run(function () { return S.db.doc('bookings/' + el.getAttribute('data-id')).update({ status: 'concluido' }); }); }
+    else if (act === 'undo') { run(function () { return S.db.doc('bookings/' + el.getAttribute('data-id')).update({ status: 'agendado' }); }); }
+    else if (act === 'copy-rem') { var bk = bookingById(el.getAttribute('data-id')); if (bk) copyText(msgLembrete(bk), el); }
+    else if (act === 'cancel') {
+      var id = el.getAttribute('data-id');
+      if (S.armed !== id) { S.armed = id; renderPanel(); return; }
+      S.armed = null;
+      run(async function () {
+        var b = bookingById(id); if (!b) return;
+        await S.db.doc('bookings/' + id).update({ status: 'cancelado' });
+        var ks = cellKeys(b.date, b.start, b.dur);
+        for (var i = 0; i < ks.length; i++) await S.db.doc('slots/' + ks[i]).delete();
+        toast('Agendamento cancelado e horário liberado');
+      });
+    } else if (act === 'toggle-block') {
+      var k = el.getAttribute('data-key'), m = Number(el.getAttribute('data-start'));
+      run(async function () {
+        var ref = S.db.doc('blocks/' + k);
+        if (S.remote.blocks[k]) await ref.delete(); else await ref.set({ date: S.panelDate, start: m });
+      });
+    } else if (act === 'block-day') {
+      run(async function () {
+        var cs = dayCells(S.panelDate).filter(function (c) { return !c.busy && !c.blocked && !c.past; });
+        for (var i = 0; i < cs.length; i++) await S.db.doc('blocks/' + cs[i].k).set({ date: S.panelDate, start: cs[i].m });
+        toast(cs.length ? 'Dia bloqueado' : 'Nada para bloquear neste dia');
+      });
+    } else if (act === 'unblock-day') {
+      run(async function () {
+        var cs = dayCells(S.panelDate).filter(function (c) { return c.blocked; });
+        for (var i = 0; i < cs.length; i++) await S.db.doc('blocks/' + cs[i].k).delete();
+        toast(cs.length ? 'Horários liberados' : 'Nenhum horário bloqueado');
+      });
+    }
+  });
+
+  /* ---------- Clientes: ranking e relatório do mês ---------- */
+  S.rankMonth = todayStr().slice(0, 7);
+  S.rankScope = 'month';
+  S.reportText = '';
+  function addMonths(ym, n) {
+    var p = ym.split('-').map(Number), d = new Date(Date.UTC(p[0], p[1] - 1 + n, 1));
+    return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1);
+  }
+  function monthName(ym) { return MES[Number(ym.slice(5, 7)) - 1]; }
+  function monthLabel(ym) { return monthName(ym) + ' de ' + ym.slice(0, 4); }
+  function allBookings() { return Object.keys(S.remote.bookings).map(function (k) { return S.remote.bookings[k]; }); }
+  function sumPrice(a) { return a.reduce(function (t, b) { return t + b.price; }, 0); }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+  function topKey(map) { var best = null; Object.keys(map).forEach(function (k) { if (best === null || map[k] > map[best]) best = k; }); return best; }
+  function isDone(b) { return b.status === 'concluido'; }
+  function notCanceled(b) { return b.status !== 'cancelado'; }
+  function inMonth(ym) { return function (b) { return b.date.slice(0, 7) === ym; }; }
+
+  function buildRank(list) {
+    var map = {};
+    list.forEach(function (b) {
+      var k = b.ctype + ':' + b.contact;
+      var r = map[k] || (map[k] = { name: b.name, ctype: b.ctype, contact: b.contact, count: 0, paid: 0, pending: 0, svcs: {}, last: 0 });
+      r.count++;
+      if ((b.created || 0) >= r.last) { r.last = b.created || 0; r.name = b.name; }
+      if (isDone(b)) r.paid += b.price; else r.pending += b.price;
+      r.svcs[b.svcName] = (r.svcs[b.svcName] || 0) + 1;
+    });
+    return Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) {
+      return b.count - a.count || b.paid - a.paid || a.name.localeCompare(b.name, 'pt-BR');
+    });
+  }
+
+  function buildReport(ym) {
+    var all = allBookings().filter(inMonth(ym));
+    var act = all.filter(notCanceled);
+    var canc = all.length - act.length;
+    var done = act.filter(isDone);
+    var open = act.filter(function (b) { return !isDone(b); });
+    var received = sumPrice(done), expected = sumPrice(open);
+    var avg = done.length ? received / done.length : 0;
+    var res = { count: act.length, received: received, expected: expected, avg: avg, text: '' };
+    if (!act.length) { res.text = 'Nenhum agendamento em ' + monthLabel(ym) + '.'; return res; }
+
+    var svc = {}, svcRev = {}, wd = {}, days = {};
+    act.forEach(function (b) {
+      svc[b.svcName] = (svc[b.svcName] || 0) + 1;
+      if (isDone(b)) svcRev[b.svcName] = (svcRev[b.svcName] || 0) + b.price;
+      var w = dow(b.date); wd[w] = (wd[w] || 0) + 1;
+      days[b.date] = (days[b.date] || 0) + 1;
+    });
+    var rank = buildRank(act);
+    var returning = rank.filter(function (r) { return r.count > 1; }).length;
+    var prevYm = addMonths(ym, -1);
+    var prev = allBookings().filter(inMonth(prevYm)).filter(notCanceled);
+    var prevRec = sumPrice(prev.filter(isDone));
+
+    var L = ['Relatório de ' + monthLabel(ym) + ' · ' + NOME, '', 'Resumo'];
+    L.push('- Agendamentos: ' + act.length + ' (concluídos: ' + done.length + ', pendentes: ' + open.length + ', cancelados: ' + canc + ').');
+    L.push('- Recebido: ' + brl(received) + '. A receber: ' + brl(expected) + '.');
+    if (done.length) L.push('- Ticket médio: ' + brl(avg) + ' por atendimento concluído.');
+    L.push('', 'Serviços');
+    Object.keys(svc).sort(function (a, b) { return svc[b] - svc[a]; }).forEach(function (n) {
+      L.push('- ' + n + ': ' + plural(svc[n], 'pedido', 'pedidos') + ', ' + brl(svcRev[n] || 0) + ' recebidos.');
+    });
+    var bd = topKey(days), bw = topKey(wd), bdd = parseYmd(bd);
+    L.push('', 'Movimento');
+    L.push('- Dia da semana mais cheio: ' + WD[Number(bw)] + ' (' + plural(wd[bw], 'agendamento', 'agendamentos') + ').');
+    L.push('- Dia mais movimentado: ' + bdd.getUTCDate() + ' de ' + MES[bdd.getUTCMonth()] + ' (' + plural(days[bd], 'agendamento', 'agendamentos') + ').');
+    L.push('', 'Clientes');
+    L.push('- Clientes diferentes: ' + rank.length + '. Com mais de um agendamento: ' + returning + '.');
+    L.push('- Cliente destaque: ' + rank[0].name + ' (' + plural(rank[0].count, 'agendamento', 'agendamentos') + ').');
+    if (prev.length) {
+      var pc = Math.round((act.length - prev.length) / prev.length * 100);
+      L.push('', 'Comparação com ' + monthName(prevYm));
+      L.push('- Agendamentos: ' + (pc > 0 ? '+' : '') + pc + '%.');
+      if (prevRec > 0) { var pr = Math.round((received - prevRec) / prevRec * 100); L.push('- Valor recebido: ' + (pr > 0 ? '+' : '') + pr + '%.'); }
+    }
+    res.text = L.join('\n');
+    return res;
+  }
+
+  function renderRank() {
+    if (S.view !== 'rank' || !S.admin) return;
+    var ym = S.rankMonth, r = buildReport(ym);
+    $('#r-kicker').textContent = ym === todayStr().slice(0, 7) ? 'Mês atual' : 'Relatório';
+    $('#r-title').textContent = monthLabel(ym);
+    $('#r-stats').innerHTML =
+      '<div class="stat"><span>Agendamentos</span><b>' + r.count + '</b></div>' +
+      '<div class="stat"><span>Recebido</span><b>' + brl(r.received) + '</b></div>' +
+      '<div class="stat"><span>A receber</span><b>' + brl(r.expected) + '</b></div>' +
+      '<div class="stat"><span>Ticket médio</span><b>' + brl(r.avg) + '</b></div>';
+    S.reportText = r.text;
+    $('#r-text').textContent = r.text;
+    var all = S.rankScope === 'all';
+    document.querySelectorAll('[data-act="rank-scope"]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-s') === S.rankScope)); });
+    $('#r-rank-title').textContent = all ? 'Ranking geral' : 'Ranking de ' + monthName(ym);
+    var list = allBookings().filter(notCanceled).filter(function (b) { return all || b.date.slice(0, 7) === ym; });
+    var rank = buildRank(list);
+    $('#r-list').innerHTML = rank.length ? rank.map(function (p, i) {
+      var svcs = Object.keys(p.svcs).sort(function (a, b) { return p.svcs[b] - p.svcs[a]; }).map(function (n) { return p.svcs[n] > 1 ? p.svcs[n] + '× ' + n : n; }).join(', ');
+      return '<div class="rk' + (i === 0 ? ' top' : '') + '"><div class="rk-pos">' + (i + 1) + '</div>' +
+        '<div class="rk-body"><div class="rk-name">' + esc(p.name) + '</div>' +
+        '<div class="rk-svcs">' + esc(svcs) + '</div>' +
+        '<div class="rk-svcs">' + plural(p.count, 'agendamento', 'agendamentos') + ' · ' + esc(contactLabel(p)) + '</div></div>' +
+        '<div class="rk-money"><b>' + brl(p.paid) + '</b><span>pago</span>' + (p.pending ? '<span>' + brl(p.pending) + ' pendente</span>' : '') + '</div></div>';
+    }).join('') : '<div class="empty">Nenhum agendamento ' + (all ? 'registrado ainda.' : 'neste mês.') + '</div>';
+  }
+
+  /* ---------- Banco de dados e permissões ---------- */
+  function refresh() {
+    if (S.step === 'when') { renderCalendar(); renderSlots(); }
+    renderPanel();
+    renderRank();
+  }
+  async function initCaps() {
+    var c = window.claude;
+    if (!c || !c.use) return;
+    try {
+      var user = await c.use('user');
+      if (user) { S.admin = await user.canEdit(); S.canWrite = await user.can('data.write'); }
+    } catch (e) {}
+    try { S.db = await c.use('db'); } catch (e) { S.db = null; }
+    if (!S.db) { S.admin = false; return; }
+    var from = todayStr();
+    function sub(name, field, since, target, onlyAdmin) {
+      if (onlyAdmin && !S.admin) return;
+      S.db.collection(name).where(field, '>=', since).onSnapshot(function (snap) {
+        var map = {};
+        snap.docs.forEach(function (d) { map[d.id] = d.data(); });
+        S.remote[target] = map;
+        refresh();
+      }, function () {});
+    }
+    sub('slots', 'date', from, 'slots', false);
+    sub('blocks', 'date', from, 'blocks', false);
+    sub('bookings', 'date', '2000-01-01', 'bookings', true);
+    if (S.admin) {
+      $('#tabs').hidden = false;
+      if (location.hash === '#painel') setView('panel', true);
+      else if (location.hash === '#clientes') setView('rank', true);
+    }
+    refresh();
+  }
+
+  /* ---------- Início ---------- */
+  renderServices();
+  go('service');
+  $('#form').addEventListener('submit', onSubmit);
+  $('#contact').addEventListener('input', maskPhone);
+  document.querySelectorAll('input[name="ctype"]').forEach(function (r) { r.addEventListener('change', applyCtype); });
+  window.addEventListener('hashchange', function () {
+    if (location.hash === '#painel' && S.admin) setView('panel', true);
+    else if (location.hash === '#clientes' && S.admin) setView('rank', true);
+    else if (location.hash === '#agendar') setView('book', true);
+  });
+  initCaps();
+})();
+</script>
+</body>
+</html>
