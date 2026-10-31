@@ -114,7 +114,7 @@ h3.sec{font:800 22px/1 var(--f-display);text-transform:uppercase;letter-spacing:
 .sumcard .total span:last-child{font:800 24px/1 var(--f-display);color:var(--sky)}
 .field{margin-bottom:18px}
 .field label.lbl,.field .lbl{display:block;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin-bottom:8px}
-input[type="text"],input[type="tel"]{width:100%;height:54px;padding:0 14px;background:var(--ink);color:var(--fg);border:1.5px solid var(--line);border-radius:6px;font:inherit;font-size:17px}
+input[type="text"],input[type="tel"],input[type="password"]{width:100%;height:54px;padding:0 14px;background:var(--ink);color:var(--fg);border:1.5px solid var(--line);border-radius:6px;font:inherit;font-size:17px}
 input::placeholder{color:#5D7189}
 input[aria-invalid="true"]{border-color:var(--bad)}
 .err{color:var(--bad);font-size:14px;min-height:20px;margin-top:6px}
@@ -304,6 +304,25 @@ footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:v
     <div class="blk" id="p-blocks"></div>
   </section>
 
+  <!-- ENTRAR (BARBEIRO) -->
+  <section id="v-login" hidden aria-label="Entrar na área do barbeiro">
+    <button type="button" class="link back" data-act="tab" data-v="book">&larr; Voltar ao agendamento</button>
+    <h2 class="title">Área do barbeiro</h2>
+    <p class="sub">Entre para ver a agenda, os clientes e o relatório.</p>
+    <form id="login-form" novalidate>
+      <div class="field">
+        <label class="lbl" for="l-email">E-mail</label>
+        <input type="text" id="l-email" autocomplete="username" inputmode="email" autocapitalize="none" placeholder="seu@email.com">
+      </div>
+      <div class="field">
+        <label class="lbl" for="l-pass">Senha</label>
+        <input type="password" id="l-pass" autocomplete="current-password">
+        <div class="err" id="err-login" role="alert"></div>
+      </div>
+      <button type="submit" class="btn" id="l-submit">Entrar</button>
+    </form>
+  </section>
+
   <!-- CLIENTES: RANKING E RELATÓRIO DO MÊS -->
   <section id="v-rank" hidden aria-label="Clientes e relatório do mês">
     <div class="pnav">
@@ -326,10 +345,12 @@ footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:v
   <footer>
     <span>Aberto todos os dias</span>
     <span><a class="link" href="https://wa.me/557799946068" target="_blank" rel="noopener">WhatsApp (77) 9994-6068</a> &middot; <a class="link" href="https://instagram.com/barbearia_oliveiraz" target="_blank" rel="noopener">@barbearia_oliveiraz</a></span>
+    <span id="admin-wrap" hidden><button type="button" class="link" id="admin-link" data-act="admin-link">Área do barbeiro</button></span>
   </footer>
 </div>
 <div id="toast" role="status" aria-live="polite" hidden></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 (function () {
   'use strict';
@@ -339,6 +360,10 @@ footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:v
   // Número da barbearia com DDI e DDD, só dígitos (ex.: '5575999999999').
   // Quando preenchido, a confirmação oferece enviar o pedido ao barbeiro pelo WhatsApp.
   var WHATSAPP_BARBEARIA = '557799946068';
+  // Supabase: cole a URL do projeto e a chave pública (anon). Passo a passo no README.
+  // Com os dois vazios, o site funciona só no aparelho de cada cliente (modo de teste).
+  var SUPABASE_URL = '';
+  var SUPABASE_ANON_KEY = '';
   var PASSO = 30;                     // minutos por célula da agenda
   var DIAS = 30;                      // janela de agendamento
   // Faixas de atendimento por dia da semana (0 = domingo), em minutos desde 00:00
@@ -459,13 +484,15 @@ footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:v
   /* ---------- Navegação ---------- */
   function setView(v, fromHash) {
     if ((v === 'panel' || v === 'rank') && !S.admin) v = 'book';
+    if (v === 'login' && !S.sb) v = 'book';
     S.view = v;
     $('#v-book').hidden = v !== 'book';
     $('#v-panel').hidden = v !== 'panel';
     $('#v-rank').hidden = v !== 'rank';
+    $('#v-login').hidden = v !== 'login';
     var btns = document.querySelectorAll('#tabs button');
     for (var i = 0; i < btns.length; i++) btns[i].setAttribute('aria-pressed', String(btns[i].getAttribute('data-v') === v));
-    if (!fromHash) { try { history.replaceState(null, '', v === 'panel' ? '#painel' : (v === 'rank' ? '#clientes' : '#agendar')); } catch (e) {} }
+    if (!fromHash) { try { history.replaceState(null, '', v === 'panel' ? '#painel' : (v === 'rank' ? '#clientes' : (v === 'login' ? '#entrar' : '#agendar'))); } catch (e) {} }
     if (v === 'panel') renderPanel();
     if (v === 'rank') renderRank();
   }
@@ -573,29 +600,19 @@ footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:v
   async function createBooking(b) {
     var cells = cellKeys(b.date, b.start, b.dur);
     if (cells.some(isTaken)) throw 'taken';
-    if (S.db && S.canWrite !== false) {
-      try {
-        for (var i = 0; i < cells.length; i++) {
-          var snap = await S.db.doc('slots/' + cells[i]).get();
-          if (snap.exists) throw { taken: true };
-        }
-        var written = [];
-        try {
-          for (var j = 0; j < cells.length; j++) {
-            await S.db.doc('slots/' + cells[j]).set({ date: b.date, bookingId: b.id });
-            written.push(cells[j]);
-          }
-          await S.db.doc('bookings/' + b.id).set(b);
-        } catch (e) {
-          for (var k = 0; k < written.length; k++) { try { await S.db.doc('slots/' + written[k]).delete(); } catch (_) {} }
-          throw e;
-        }
-        return 'remote';
-      } catch (e) {
-        if (e && e.taken) throw 'taken';
-        /* sem permissão de escrita no banco: cai para o modo local */
+    if (S.sb) {
+      var res = await S.sb.rpc('criar_agendamento', {
+        p: { date: b.date, start: b.start, svc: b.svc, name: b.name, ctype: b.ctype, contact: b.contact }
+      });
+      if (res.error) {
+        if (/horario_ocupado/.test(res.error.message || '')) { loadRemote(); throw 'taken'; }
+        throw res.error;
       }
+      b.id = res.data;
+      loadRemote();
+      return 'remote';
     }
+    /* modo de teste: sem Supabase configurado, salva só neste aparelho */
     S.local.bookings[b.id] = b;
     cells.forEach(function (k) { S.local.slots[k] = { bookingId: b.id }; });
     saveLocal();
@@ -762,6 +779,11 @@ footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:v
     } else if (act === 'copy-msg') { copyText(S.lastMsg, $('#msg-text')); }
     else if (act === 'restart') { S.svc = null; S.date = null; S.start = null; go('service'); }
     else if (act === 'tab') { setView(el.getAttribute('data-v')); }
+    else if (act === 'admin-link') {
+      if (S.admin) {
+        S.sb.auth.signOut().then(function () { return applyAuth(); }).then(function () { setView('book'); });
+      } else { setView('login'); }
+    }
     else if (act === 'rank-prev') { S.rankMonth = addMonths(S.rankMonth, -1); renderRank(); }
     else if (act === 'rank-next') { S.rankMonth = addMonths(S.rankMonth, 1); renderRank(); }
     else if (act === 'rank-scope') { S.rankScope = el.getAttribute('data-s'); renderRank(); }
@@ -913,54 +935,134 @@ footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:v
     }).join('') : '<div class="empty">Nenhum agendamento ' + (all ? 'registrado ainda.' : 'neste mês.') + '</div>';
   }
 
-  /* ---------- Banco de dados e permissões ---------- */
+  /* ---------- Banco de dados (Supabase) ---------- */
   function refresh() {
     if (S.step === 'when') { renderCalendar(); renderSlots(); }
     renderPanel();
     renderRank();
   }
-  async function initCaps() {
-    var c = window.claude;
-    if (!c || !c.use) return;
+  function fromRow(r) {
+    return { id: r.id, date: r.date, start: r.start_min, dur: r.dur, svc: r.svc, svcName: r.svc_name,
+      price: Number(r.price), name: r.name, ctype: r.ctype, contact: r.contact, status: r.status, created: Number(r.created) };
+  }
+  // Escritas do painel (só funcionam para o barbeiro logado; o banco confere de novo).
+  function makeDb(sb) {
+    function parse(path) { var p = path.split('/'); return { t: p[0], id: p[1] }; }
+    return {
+      doc: function (path) {
+        var r = parse(path);
+        return {
+          update: async function (data) {
+            if (r.t !== 'bookings') throw new Error('update não suportado');
+            var res = await sb.from('bookings').update(data).eq('id', r.id);
+            if (res.error) throw res.error;
+            if (S.remote.bookings[r.id]) Object.assign(S.remote.bookings[r.id], data);
+          },
+          set: async function (data) {
+            if (r.t !== 'blocks') throw new Error('set não suportado');
+            var res = await sb.from('blocks').upsert({ key: r.id, date: data.date, start_min: data.start });
+            if (res.error) throw res.error;
+            S.remote.blocks[r.id] = data;
+          },
+          delete: async function () {
+            var res = await sb.from(r.t).delete().eq(r.t === 'bookings' ? 'id' : 'key', r.id);
+            if (res.error) throw res.error;
+            if (r.t === 'slots') delete S.remote.slots[r.id];
+            if (r.t === 'blocks') delete S.remote.blocks[r.id];
+          }
+        };
+      }
+    };
+  }
+  var loading = false;
+  async function loadRemote() {
+    if (!S.sb || loading) return;
+    loading = true;
     try {
-      var user = await c.use('user');
-      if (user) { S.admin = await user.canEdit(); S.canWrite = await user.can('data.write'); }
+      var today = todayStr();
+      var q = await Promise.all([
+        S.sb.from('slots').select('key,date,booking_id').gte('date', today),
+        S.sb.from('blocks').select('key,date,start_min').gte('date', today)
+      ]);
+      if (!q[0].error) { var m = {}; q[0].data.forEach(function (r) { m[r.key] = { date: r.date, bookingId: r.booking_id }; }); S.remote.slots = m; }
+      if (!q[1].error) { var n = {}; q[1].data.forEach(function (r) { n[r.key] = { date: r.date, start: r.start_min }; }); S.remote.blocks = n; }
+      if (S.admin) {
+        var all = [], from = 0, page = 1000;
+        while (true) {
+          var res = await S.sb.from('bookings').select('*').order('id', { ascending: true }).range(from, from + page - 1);
+          if (res.error) { all = null; break; }
+          all = all.concat(res.data);
+          if (res.data.length < page) break;
+          from += page;
+        }
+        if (all) { var bm = {}; all.forEach(function (row) { bm[row.id] = fromRow(row); }); S.remote.bookings = bm; }
+      }
     } catch (e) {}
-    try { S.db = await c.use('db'); } catch (e) { S.db = null; }
-    if (!S.db) { S.admin = false; return; }
-    var from = todayStr();
-    function sub(name, field, since, target, onlyAdmin) {
-      if (onlyAdmin && !S.admin) return;
-      S.db.collection(name).where(field, '>=', since).onSnapshot(function (snap) {
-        var map = {};
-        snap.docs.forEach(function (d) { map[d.id] = d.data(); });
-        S.remote[target] = map;
-        refresh();
-      }, function () {});
-    }
-    sub('slots', 'date', from, 'slots', false);
-    sub('blocks', 'date', from, 'blocks', false);
-    sub('bookings', 'date', '2000-01-01', 'bookings', true);
-    if (S.admin) {
-      $('#tabs').hidden = false;
-      if (location.hash === '#painel') setView('panel', true);
-      else if (location.hash === '#clientes') setView('rank', true);
-    }
+    loading = false;
     refresh();
+  }
+  async function checkAdmin() {
+    try {
+      var s = await S.sb.auth.getSession();
+      if (!s.data || !s.data.session) return false;
+      var r = await S.sb.rpc('sou_admin');
+      return !r.error && r.data === true;
+    } catch (e) { return false; }
+  }
+  async function applyAuth() {
+    S.admin = await checkAdmin();
+    S.db = S.admin ? makeDb(S.sb) : null;
+    if (!S.admin) S.remote.bookings = {};
+    $('#tabs').hidden = !S.admin;
+    $('#admin-link').textContent = S.admin ? 'Sair' : 'Área do barbeiro';
+    if (!S.admin && (S.view === 'panel' || S.view === 'rank')) setView('book');
+    await loadRemote();
+  }
+  async function onLogin(e) {
+    e.preventDefault();
+    var email = $('#l-email').value.trim(), pass = $('#l-pass').value;
+    var btn = $('#l-submit'), err = $('#err-login');
+    err.textContent = '';
+    if (!email || !pass) { err.textContent = 'Informe o e-mail e a senha.'; return; }
+    btn.disabled = true; btn.textContent = 'Entrando...';
+    try {
+      var r = await S.sb.auth.signInWithPassword({ email: email, password: pass });
+      if (r.error) { err.textContent = 'E-mail ou senha incorretos.'; }
+      else {
+        await applyAuth();
+        if (S.admin) { $('#l-pass').value = ''; setView('panel'); }
+        else { err.textContent = 'Este e-mail não tem acesso ao painel.'; await S.sb.auth.signOut(); }
+      }
+    } catch (x) { err.textContent = 'Não foi possível entrar agora. Tente de novo.'; }
+    btn.disabled = false; btn.textContent = 'Entrar';
+  }
+  async function initBackend() {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !window.supabase) return;
+    S.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    $('#admin-wrap').hidden = false;
+    await applyAuth();
+    var h = location.hash;
+    if (S.admin && h === '#painel') setView('panel', true);
+    else if (S.admin && h === '#clientes') setView('rank', true);
+    else if (!S.admin && h === '#entrar') setView('login', true);
+    setInterval(function () { if (!document.hidden) loadRemote(); }, 20000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) loadRemote(); });
   }
 
   /* ---------- Início ---------- */
   renderServices();
   go('service');
   $('#form').addEventListener('submit', onSubmit);
+  $('#login-form').addEventListener('submit', onLogin);
   $('#contact').addEventListener('input', maskPhone);
   document.querySelectorAll('input[name="ctype"]').forEach(function (r) { r.addEventListener('change', applyCtype); });
   window.addEventListener('hashchange', function () {
     if (location.hash === '#painel' && S.admin) setView('panel', true);
     else if (location.hash === '#clientes' && S.admin) setView('rank', true);
+    else if (location.hash === '#entrar' && S.sb) setView('login', true);
     else if (location.hash === '#agendar') setView('book', true);
   });
-  initCaps();
+  initBackend();
 })();
 </script>
 </body>
